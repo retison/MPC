@@ -1,0 +1,9 @@
+# using python 3.8 或者 3.9 都行
+sqlparse==0.4.2
+setproctitle==1.2.3
+tornado==6.2
+PyMySQL==1.0.2
+# 一下用于 mpc 操作
+pycryptodome==3.15.0
+gmpy2==2.1.2
+bitarray==2.6.0
