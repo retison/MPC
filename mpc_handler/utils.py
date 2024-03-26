@@ -59,7 +59,7 @@ def isPrime(m):
 # 生成一个大素数
 def generate_prim():
     while True:
-        prime_number = randprime(10 ** 256, 10 ** 300 - 1)
+        prime_number = randprime(2 ** 256, 2 ** 299 - 1)
         if isPrime(prime_number):
             return prime_number
 

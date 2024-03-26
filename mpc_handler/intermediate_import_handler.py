@@ -54,7 +54,7 @@ class IntermediateImportHandler(data_base_handler.DataBaseHandler):
         # 一次注册的数据量过小时
         # 随机放进一个分片中
         # 确定文件路径
-        data_dir = os.path.join(mpc_job_dir, self.job_id, "intermediate_input")
+        data_dir = os.path.join(mpc_job_dir, self.job_id, "output_input")
         if not os.path.exists(data_dir): os.makedirs(data_dir)
         # 这里 index + 1 是为了和线程对应起来
         file_path = os.path.join(data_dir, "input_%d" % self.party )

@@ -1,1 +1,0 @@
-"""Implementation of different MPC protocols"""

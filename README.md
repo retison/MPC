@@ -1,8 +1,8 @@
-****# FedSQL 的 SQL 隐私集合求交集模块 （MPC）
+****# FedSQL 的 SQL 多方安全计算模块 （MPC）
 
 ## 调试运行配置
 
-对于 MPC 模块而言，成功运行该模块需要2个节点，每个节点均持有一部分数据，通过 MPC 操作求得双方数据ID的交集部分。
+对于 MPC 模块而言，成功运行该模块需要2个节点，对于四则运算等操作，每个节点均持有一部分数据，对于聚合运算等操作，仅有一方持有数据即可。通过本模块得双方或多方数据的多方安全计算结果。
 
 总体而言，分以下几步：
 
@@ -15,7 +15,7 @@ SQL Parser 的运行需要通过配合 SQL 数据库执行（记录任务信息�
 ```
 docker pull mysql:5.7;
 
-docker run -itd --name mysql-test -p 13306:3306 -e MYSQL_ROOT_PASSWORD=123456 mysql:5.7
+docker run -itd --name mysql -p 13306:3306 -e MYSQL_ROOT_PASSWORD=123456 mysql:5.7
 
 docker exec -it mysql /bin/bash
 

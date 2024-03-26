@@ -12,11 +12,8 @@ import tornado.web
 
 from config import local_db_passwd, local_db_ip, local_db_dbname, local_db_port, local_db_username
 from config import logger_config_path
-# from utilities import global_var as global_dict
-# from utilities.database_manager import database_manager
 from config import mpc_data_dir
 from config import mpc_job_dir
-# from tornado.concurrent import run_on_executor
 from utilities import logger
 from utilities.database_manager import database_manager
 from utilities.sql_template import get_s_party_list, change_mpc_job_status
@@ -28,8 +25,6 @@ logger = logging.getLogger('FED_SQL')
 
 
 class DataBaseHandler(tornado.web.RequestHandler):
-    # executor = ThreadPoolExecutor(max_workers=4)
-
     # 和 任务相关的 logger，使用 self.logger 进行处理
     def create_logger(self):
         import logging.config

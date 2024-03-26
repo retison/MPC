@@ -341,7 +341,7 @@ def _find_safe_prime(l):
         # Compute pi to the required precision.
         decimal.setcontext(decimal.Context(prec=round(l / math.log2(10))))
         # See https://docs.python.org/3/library/decimal.html for following recipe:
-        decimal.getcontext().prec += 2  # extra digits for intermediate steps
+        decimal.getcontext().prec += 2  # extra digits for output steps
         three = decimal.Decimal(3)
         lasts, t, s, n, na, d, da = 0, three, 3, 1, 0, 0, 24
         while s != lasts:

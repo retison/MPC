@@ -119,10 +119,8 @@ def send_restful_request( url, request_body, timeout = 10, retry = 40):
         try_count += 1
         try:
             r = requests.post(url, data = json.dumps(request_body), timeout = timeout)
-            # self.logger.info("Request %s success, count = %d"% (url, try_count))
             success = True
             res = r.text
-            # self.logger.info("Response: %s" % res[:200] )
         except requests.ConnectionError:
             print("Request %s failed (ConnectionError), try_count = %d"\
                 % (url, try_count)) 
