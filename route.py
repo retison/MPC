@@ -6,11 +6,11 @@ from mpc_handler.data_import_handler import DataImportHandler
 from mpc_handler.default_handler import DefaultHandler, HelloHandler
 from mpc_handler.get_cert_handler import GetCertHandler
 from mpc_handler.get_port_handler import PortGetHandler
-from mpc_handler.output_get_handler import IntermediateGetHandler
+from mpc_handler.output_get_handler import OutputGetHandler
 from mpc_handler.job_log_handler import JobLogHandler
 from mpc_handler.job_query_handler import JobQueryHandler
 from mpc_handler.job_reg_handler import JobRegHandler
-from mpc_handler.config_get_handler import  GetConfigHandler
+from mpc_handler.config_get_handler import GetConfigHandler
 
 
 def get_handlers():
@@ -21,10 +21,10 @@ def get_handlers():
 
     crt_handlers = [
         ("/1.0/mpc/crt/gene_crt", CerGenerateHandler, dict(action="ca_import")),
-        ("/1.0/mpc/crt/get_crt",GetCertHandler,dict(action = "cert_get"))
+        ("/1.0/mpc/crt/get_crt", GetCertHandler, dict(action="cert_get"))
     ]
 
-    #TODO order by\limit\group by这三个中前两个还是很有关系的，但不知道该咋办，这三个还是要多思考一会
+    # TODO order by\limit\group by这三个中前两个还是很有关系的，但不知道该咋办，这三个还是要多思考一会
     job_handlers = [
         ("/1.0/mpc/job/reg", JobRegHandler, dict(action="job_reg")),
         ("/1.0/mpc/job/query", JobQueryHandler, dict(action="job_query")),  # 查询任务状态
@@ -35,9 +35,9 @@ def get_handlers():
         ("/1.0/mpc/job/get_port", PortGetHandler, dict(action="get_port")),
         ("/1.0/mpc/job/aggre", AggreHandler, dict(action="handle_aggre")),
         # 中间结果的获取函数
-        ("/1.0/mpc/job/output/get", IntermediateGetHandler, dict(action="output_get")),
+        ("/1.0/mpc/job/output/get", OutputGetHandler, dict(action="output_get")),
 
-        ("/1.0/mpc/result/get", IntermediateGetHandler, dict(action="result_get")),
+        ("/1.0/mpc/result/get", OutputGetHandler, dict(action="result_get")),
 
     ]
 

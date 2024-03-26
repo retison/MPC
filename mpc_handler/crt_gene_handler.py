@@ -12,7 +12,7 @@ class CerGenerateHandler(data_base_handler.DataBaseHandler):
 
     @run_on_executor
     def post(self):
-        self.logger.info("Start generate crt.")
+        logger.info("Start generate crt.")
         parser = argparse.ArgumentParser()
         parser.add_argument('-p', '--prefix',
                             help='output filename prefix')

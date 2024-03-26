@@ -15,7 +15,7 @@ from utilities.utilities import get_log_file_handler
 from utilities.utilities import wc_count
 
 
-class IntermediateGetHandler(data_base_handler.DataBaseHandler):
+class OutputGetHandler(data_base_handler.DataBaseHandler):
     executor = ThreadPoolExecutor(max_workers=8)
 
     @run_on_executor
