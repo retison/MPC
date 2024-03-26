@@ -5,6 +5,7 @@ from tornado.concurrent import run_on_executor
 
 from config import local_db_ip, local_db_username, local_db_passwd, local_db_dbname, local_db_port
 from mpc_handler.base import data_base_handler
+from utilities import logger
 from utilities.database_manager import database_manager
 from utilities.generate_certificates import create_request, create_key, create_certificate, save_key, save_certificate
 from utilities.status_code import OPERATION_FAILED
@@ -24,7 +25,7 @@ class GetCertHandler(data_base_handler.DataBaseHandler):
     @run_on_executor
     def post(self):
         if self.decode_check(["party_id"], [int]) is False:
-            self.logger.info("Decode Check Failed.")
+            logger.info("Decode Check Failed.")
             self.write(self.res_dict)
             return
         party_id = self.request_dict["party_id"]
@@ -61,6 +62,7 @@ class GetCertHandler(data_base_handler.DataBaseHandler):
         with open(f'config/party_{party_id}/party_{party_id}.crt', "rb") as f:
             party_crt = f.read()
         f.close()
+        logger.info("get CA certification!")
         self.return_parse_result(0, 'success', {"ca_crt": ca_crt_data.decode(),
                                                 "party_key": party_key.decode(), "party_crt": party_crt.decode()})
         return

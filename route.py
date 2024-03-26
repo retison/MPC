@@ -6,8 +6,7 @@ from mpc_handler.data_import_handler import DataImportHandler
 from mpc_handler.default_handler import DefaultHandler, HelloHandler
 from mpc_handler.get_cert_handler import GetCertHandler
 from mpc_handler.get_port_handler import PortGetHandler
-from mpc_handler.intermediate_get_handler import IntermediateGetHandler
-from mpc_handler.intermediate_import_handler import IntermediateImportHandler
+from mpc_handler.output_get_handler import IntermediateGetHandler
 from mpc_handler.job_log_handler import JobLogHandler
 from mpc_handler.job_query_handler import JobQueryHandler
 from mpc_handler.job_reg_handler import JobRegHandler
@@ -37,7 +36,6 @@ def get_handlers():
         ("/1.0/mpc/job/aggre", AggreHandler, dict(action="handle_aggre")),
         # 中间结果的获取函数
         ("/1.0/mpc/job/output/get", IntermediateGetHandler, dict(action="output_get")),
-        ("/1.0/mpc/job/output/import", IntermediateImportHandler, dict(action="output_import")),
 
         ("/1.0/mpc/result/get", IntermediateGetHandler, dict(action="result_get")),
 

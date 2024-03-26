@@ -12,12 +12,13 @@ from flow_control.mpc_aggre.aggre_flow_guest import RSAFlowGuest
 from mpc.hash_utils import data_parse_f2f
 from mpc_handler.base import data_base_handler
 from mpc_handler.utils import arith_operation, aggre_operation, other_operation, generate_prim
+from utilities import logger
 from utilities.database_manager import database_manager
 from utilities.sql_template import get_mpc_job_insert_sql
 from utilities.status_code import *
 from utilities.utilities import get_log_file_handler, is_valid_variable_name, string_to_md5
 
-
+# TODO 还有对limit/order by/group by 的
 class JobRegHandler(data_base_handler.DataBaseHandler):
     executor = ThreadPoolExecutor(max_workers=4)
 
@@ -34,13 +35,13 @@ class JobRegHandler(data_base_handler.DataBaseHandler):
     @run_on_executor
     def post(self):
         self.create_logger()
-        self.logger.info("Start Decode Check.")
+        logger.info("Start Decode Check.")
         if self.decode_check(["data_list", "mpc_method", "party_list"], [list, str, list]) is False:
-            self.logger.info("Decode Check Failed.")
+            logger.info("Decode Check Failed.")
             self.write(self.res_dict)
             return
-        self.logger.info("Decode Check Success.")
-        self.logger.info(self.request_dict)
+        logger.info("Decode Check Success.")
+        logger.info(self.request_dict)
         # 获取特殊参数
         try:
             self.from_machine = self.request_dict["from_machine"]
@@ -57,19 +58,19 @@ class JobRegHandler(data_base_handler.DataBaseHandler):
         self.data_list = self.request_dict["data_list"]
         self.length = len(self.data_list)
         if self.length == 0:
-            self.logger.warning("Empty Data List.")
+            logger.warning("Empty Data List.")
             self.return_parse_result(DATA_VALUE_ERROR, \
                                      status_msg_dict[DATA_VALUE_ERROR] + ": Empty Data List.", {})
             return
         for data_id in self.data_list:
             valid = is_valid_variable_name(data_id)
             if valid is False:
-                self.logger.warning("Invalid Data ID.")
+                logger.warning("Invalid Data ID.")
                 self.return_parse_result(DATA_VALUE_ERROR, \
                                          status_msg_dict[DATA_VALUE_ERROR] + ": Invalid Data ID.", {})
                 return
                 # for each_data_id 结束
-        self.logger.info("Data List check Success.")
+        logger.info("Data List check Success.")
         # 检查 job_id
         if "job_id" in self.request_dict.keys():
             self.job_id = self.request_dict["job_id"]
@@ -79,7 +80,7 @@ class JobRegHandler(data_base_handler.DataBaseHandler):
             self.key = self.request_dict["key"]
         else:
             self.key = generate_prim()
-        self.logger.info("The job_id is: %s." % self.job_id)
+        logger.info("The job_id is: %s." % self.job_id)
         self.job_dir = os.path.join(mpc_job_dir, self.job_id)
         # 创建专属文件夹
         if not os.path.exists(self.job_dir): os.makedirs(self.job_dir)
@@ -87,8 +88,8 @@ class JobRegHandler(data_base_handler.DataBaseHandler):
         job_log_path = os.path.join(self.job_dir, "mpc_application.log")
 
         self.job_log_handler = get_log_file_handler(job_log_path)
-        self.logger.addHandler(self.job_log_handler)
-        self.logger.info("MPC Job %s created." % self.job_id)
+        logger.addHandler(self.job_log_handler)
+        logger.info("MPC Job %s created." % self.job_id)
         self.mpc_method = self.request_dict["mpc_method"]
         # 检查完毕，开始往db里写任务信息
         # 主要耗时在这里，但是还好
@@ -97,7 +98,7 @@ class JobRegHandler(data_base_handler.DataBaseHandler):
         current_time = int(time.time())
         job_insert_sql = get_mpc_job_insert_sql(self.job_id, self.data_list, self.party_list, self.mpc_method, self.key,
                                                 "registered", current_time, current_time)
-        self.logger.debug("The job insert SQL is: %s." % job_insert_sql.replace("\n", " "))
+        logger.debug("The job insert SQL is: %s." % job_insert_sql.replace("\n", " "))
         self.dbm.insert(job_insert_sql)
         # 检查状态之后返回
         if self.dbm.insert_success is True:
@@ -106,7 +107,7 @@ class JobRegHandler(data_base_handler.DataBaseHandler):
             self.return_parse_result(OPERATION_FAILED, \
                                      status_msg_dict[OPERATION_FAILED] + ": job database insert failed", {})
         # 新开线程处理 md5
-        self.logger.info("Response Calculation Finished.")
+        logger.info("Response Calculation Finished.")
         if self.mpc_method in arith_operation:
             # TODO 算数运算
             self.execute_at_backend(self.hash_preprocessing)  # 后台执行
@@ -119,12 +120,12 @@ class JobRegHandler(data_base_handler.DataBaseHandler):
             # TODO limit\grop by\order by操作的
             self.execute_at_backend(self.ot_preprocessing)
         else:
-            self.logger.warning("Method is not exist")
+            logger.warning("Method is not exist")
             exit(0)
         return
 
     def hash_preprocessing(self):
-        self.logger.info("MPC method is: RSA, start preprocessing.")
+        logger.info("MPC method is: RSA, start preprocessing.")
         self.change_job_status(self.job_id, "running")
         # 找出属于自己的 data source
         disk_data_list = self.get_data_list()
@@ -135,15 +136,15 @@ class JobRegHandler(data_base_handler.DataBaseHandler):
         # 查看是否检索到了 self data id
         if self_data_id is None or self_data_id not in disk_data_list:
             self.change_job_status(self.job_id, 'failed')
-            self.logger.error("Local data ID NOT found!")
+            logger.error("Local data ID NOT found!")
             # 更新任务状态failed
             return
-        self.logger.info("Local Data ID is %s" % self_data_id)
+        logger.info("Local Data ID is %s" % self_data_id)
         # 检索到之后，再进行hash 处理
-        self.logger.info("Start Hash Calculation.")
+        logger.info("Start Hash Calculation.")
         # 直接套try执行
         try:
-            parse_res = data_parse_f2f(self_data_id, self.job_id, self.logger)
+            parse_res = data_parse_f2f(self_data_id, self.job_id, logger)
         except:
             parse_res = False
         # 再更新任务状态
@@ -152,15 +153,15 @@ class JobRegHandler(data_base_handler.DataBaseHandler):
             # print(self.get_job_status(self.job_id))
         else:
             self.change_job_status(self.job_id, "failed")
-        self.logger.info("Job ID %s dir is %s" % (self.job_id, self.job_dir))
-        self.logger.info("Job ID %s ready." % self.job_id)
+        logger.info("Job ID %s dir is %s" % (self.job_id, self.job_dir))
+        logger.info("Job ID %s ready." % self.job_id)
 
         # 再来，后续就是guest 调用hosts接口进行剩下的操作了！
         fcx = ArithFlowGuest(self.job_id)
         fcx.run_protocol()
 
     def rsa_preprocessing(self):
-        self.logger.info("MPC method is: Hash, start preprocessing.")
+        logger.info("MPC method is: Hash, start preprocessing.")
         self.change_job_status(self.job_id, "running")
         if self.from_machine:
             # 找出属于自己的 data source
@@ -172,15 +173,15 @@ class JobRegHandler(data_base_handler.DataBaseHandler):
             # 查看是否检索到了 self data id
             if self_data_id is None or self_data_id not in disk_data_list:
                 self.change_job_status(self.job_id, 'failed')
-                self.logger.error("Local data ID NOT found!")
+                logger.error("Local data ID NOT found!")
                 # 更新任务状态failed
                 return
-            self.logger.info("Local Data ID is %s" % self_data_id)
+            logger.info("Local Data ID is %s" % self_data_id)
             # 检索到之后，再进行hash 处理
-            self.logger.info("Start Hash Calculation.")
+            logger.info("Start Hash Calculation.")
             # 直接套try执行
             try:
-                parse_res = data_parse_f2f(self_data_id, self.job_id, self.logger)
+                parse_res = data_parse_f2f(self_data_id, self.job_id, logger)
             except:
                 parse_res = False
             # 再更新任务状态
@@ -191,15 +192,15 @@ class JobRegHandler(data_base_handler.DataBaseHandler):
                 self.change_job_status(self.job_id, "failed")
         else:
             self.change_job_status(self.job_id, "ready")
-        self.logger.info("Job ID %s dir is %s" % (self.job_id, self.job_dir))
-        self.logger.info("Job ID %s ready." % self.job_id)
+        logger.info("Job ID %s dir is %s" % (self.job_id, self.job_dir))
+        logger.info("Job ID %s ready." % self.job_id)
 
         # 再来，后续就是guest 调用hosts接口进行剩下的操作了！
         fcx = RSAFlowGuest(self.job_id)
         fcx.run_protocol()
 
     def substring_preprocessing(self):
-        self.logger.info("MPC method is: Hash, start preprocessing.")
+        logger.info("MPC method is: Hash, start preprocessing.")
         self.change_job_status(self.job_id, "running")
         if self.from_machine:
             # 找出属于自己的 data source
@@ -211,15 +212,15 @@ class JobRegHandler(data_base_handler.DataBaseHandler):
             # 查看是否检索到了 self data id
             if self_data_id is None or self_data_id not in disk_data_list:
                 self.change_job_status(self.job_id, 'failed')
-                self.logger.error("Local data ID NOT found!")
+                logger.error("Local data ID NOT found!")
                 # 更新任务状态failed
                 return
-            self.logger.info("Local Data ID is %s" % self_data_id)
+            logger.info("Local Data ID is %s" % self_data_id)
             # 检索到之后，再进行hash 处理
-            self.logger.info("Start Hash Calculation.")
+            logger.info("Start Hash Calculation.")
             # 直接套try执行
             try:
-                parse_res = data_parse_f2f(self_data_id, self.job_id, self.logger)
+                parse_res = data_parse_f2f(self_data_id, self.job_id, logger)
             except:
                 parse_res = False
             # 再更新任务状态
@@ -229,14 +230,14 @@ class JobRegHandler(data_base_handler.DataBaseHandler):
                 self.change_job_status(self.job_id, "failed")
         else:
             self.change_job_status(self.job_id, "ready")
-        self.logger.info("Job ID %s dir is %s" % (self.job_id, self.job_dir))
-        self.logger.info("Job ID %s ready." % self.job_id)
+        logger.info("Job ID %s dir is %s" % (self.job_id, self.job_dir))
+        logger.info("Job ID %s ready." % self.job_id)
 
         fcx = SubtringFlowGuest(self.job_id)
         fcx.run_protocol()
 
     def ot_preprocessing(self):
-        self.logger.info("MPC method is: Hash, start preprocessing.")
+        logger.info("MPC method is: Hash, start preprocessing.")
         self.change_job_status(self.job_id, "running")
         # 找出属于自己的 data source
         disk_data_list = self.get_data_list()
@@ -248,16 +249,16 @@ class JobRegHandler(data_base_handler.DataBaseHandler):
         # 查看是否检索到了 self data id
         if self_data_id is None or self_data_id not in disk_data_list:
             self.change_job_status(self.job_id, 'failed')
-            self.logger.error("Local data ID NOT found!")
+            logger.error("Local data ID NOT found!")
             # 更新任务状态failed
             return
-        self.logger.info("Local Data ID is %s" % self_data_id)
+        logger.info("Local Data ID is %s" % self_data_id)
         # 检索到之后，再进行hash 处理
-        self.logger.info("Start Hash Calculation.")
+        logger.info("Start Hash Calculation.")
         # 直接套try执行
         try:
-            # parse_res = hash_parse_queue(self_data_id, self.job_id, self.logger)
-            parse_res = data_parse_f2f(self_data_id, self.job_id, self.logger)
+            # parse_res = hash_parse_queue(self_data_id, self.job_id, logger)
+            parse_res = data_parse_f2f(self_data_id, self.job_id, logger)
         except:
             parse_res = False
         # 再更新任务状态
@@ -266,8 +267,8 @@ class JobRegHandler(data_base_handler.DataBaseHandler):
             # print(self.get_job_status(self.job_id))
         else:
             self.change_job_status(self.job_id, "failed")
-        self.logger.info("Job ID %s dir is %s" % (self.job_id, self.job_dir))
-        self.logger.info("Job ID %s ready." % self.job_id)
+        logger.info("Job ID %s dir is %s" % (self.job_id, self.job_dir))
+        logger.info("Job ID %s ready." % self.job_id)
 
         # 再来，后续就是guest 调用hosts接口进行剩下的操作了！
         fcx = SubtringFlowGuest(self.job_id)

@@ -25,14 +25,14 @@ logger = logging.getLogger('FED_SQL')
 
 
 class DataBaseHandler(tornado.web.RequestHandler):
-    # 和 任务相关的 logger，使用 self.logger 进行处理
+    # 和 任务相关的 logger，使用 logger 进行处理
     def create_logger(self):
         import logging.config
         from config import logger_config_path
         # 经过测试可用
         logging.config.fileConfig(logger_config_path)
         tmstmp = str(time.time())
-        self.logger = logging.getLogger('handler_self_logger' + tmstmp)
+        logger = logging.getLogger('handler_self_logger' + tmstmp)
 
     def initialize(self, action, target=None) -> None:
         # print(action)
@@ -166,10 +166,10 @@ class DataBaseHandler(tornado.web.RequestHandler):
         try:
             status_res = local_dbm.query(query_sql)
         except:
-            self.logger.error("Failed to execute query: %s" % query_sql)
+            logger.error("Failed to execute query: %s" % query_sql)
             return "Failed"
         result = status_res[0][0]
-        self.logger.info("Get job Status query result: %s", result)
+        logger.info("Get job Status query result: %s", result)
         return result
 
     # 从 job_id 中提取 mpc_method
@@ -181,10 +181,10 @@ class DataBaseHandler(tornado.web.RequestHandler):
         try:
             status_res = local_dbm.query(query_sql)
         except:
-            self.logger.error("Failed to execute query: %s" % query_sql)
+            logger.error("Failed to execute query: %s" % query_sql)
             return "Failed"
         result = status_res[0][0]
-        self.logger.info("Get job method query result: %s", result)
+        logger.info("Get job method query result: %s", result)
         return result
 
     # 检查 job_id 是否存在
@@ -204,8 +204,8 @@ class DataBaseHandler(tornado.web.RequestHandler):
         try:
             status_res = local_dbm.query(query_sql)
         except:
-            self.logger.error("Failed to execute query: %s" % query_sql)
+            logger.error("Failed to execute query: %s" % query_sql)
             return "Failed"
         result = status_res[0][0]
-        self.logger.info("Get job key query result: %s", result)
+        logger.info("Get job key query result: %s", result)
         return result

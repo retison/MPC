@@ -56,6 +56,5 @@ action_method_dict["handle_arith"] = "/1.0/mpc/job/arith"
 action_method_dict["handle_aggre"] = "/1.0/mpc/job/aggre"
 
 action_method_dict['output_get'] = "/1.0/mpc/job/output/get"
-action_method_dict['output_import'] = "/1.0/mpc/job/output/import"
 
 action_method_dict['result_get'] = "/1.0/mpc/result/get"

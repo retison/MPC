@@ -7,7 +7,7 @@ from concurrent.futures import ThreadPoolExecutor
 
 from tornado.concurrent import run_on_executor
 
-from config import CPU_COUNT, local_db_passwd, local_db_ip, local_db_dbname, local_db_port, local_db_username, MPC_PORT
+from config import local_db_passwd, local_db_ip, local_db_dbname, local_db_port, local_db_username, MPC_PORT
 from config import mpc_job_dir
 from flow_control.mpc_aggre.utils import list_operation
 from mpc_handler.base import data_base_handler
@@ -64,9 +64,9 @@ class AggreHandler(data_base_handler.DataBaseHandler):
         # TODO 启动即可
         self.res_list = self.get_data()
         if self.res_list is None:
-            self.return_parse_result(OPERATION_FAILED, "split too huge", {"is_ok": False})
+            self.return_parse_result(OPERATION_FAILED, "split too huge", {})
             return
-        th = threading.Thread(target=self.abc)
+        th = threading.Thread(target=self.mpc_calculation)
         with open(f"tmp/job/{self.job_id}/config.ini", 'r') as f:
             port = f.readlines()
         f.close()
@@ -78,12 +78,14 @@ class AggreHandler(data_base_handler.DataBaseHandler):
         curr_port = int(curr_port, 10)
         if is_port_available(curr_port):
             self.return_parse_result(SUCCESS, status_msg_dict[SUCCESS], {})
+            self.logger.info(f"start job {self.job_id} mpc calculate")
             th.start()
             return
         else:
             self.return_parse_result(OPERATION_FAILED, "port is used.", {})
+            self.logger.info(f"job {self.job_id} mpc calculation start fail!")
 
-    def abc(self):
+    def mpc_calculation(self):
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         sys.argv.append(f"-C../tmp/job/{self.job_id}/config.ini")
@@ -104,6 +106,7 @@ class AggreHandler(data_base_handler.DataBaseHandler):
                 data_list += f.readlines()
             f.close()
         data_list = [float(i[:-1]) for i in data_list]
+        self.logger.info("get data success!")
         return data_list
 
     async def mpc_calculate(self, curr_mpc, method, data_list):

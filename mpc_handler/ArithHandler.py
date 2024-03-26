@@ -56,7 +56,7 @@ class ArithHandler(data_base_handler.DataBaseHandler):
         job_log_path = os.path.join(self.job_dir, "mpc_application.log")
         self.job_log_handler = get_log_file_handler(job_log_path)
         self.logger.addHandler(self.job_log_handler)
-        self.logger.info("Integer API called")
+        self.logger.info("Arith API called")
 
         # TODO 需要先读取本地文件，然后创建一个argv，然后开始mpc.run
         # TODO 启动即可
@@ -76,10 +76,12 @@ class ArithHandler(data_base_handler.DataBaseHandler):
         curr_port = int(curr_port, 10)
         if is_port_available(curr_port):
             self.return_parse_result(SUCCESS, status_msg_dict[SUCCESS], {})
+            self.logger.info(f"start job {self.job_id} mpc calculate")
             th.start()
             return
         else:
             self.return_parse_result(OPERATION_FAILED, "port is used.", {})
+            self.logger.info(f"job {self.job_id} mpc calculation start fail!")
 
     def abc(self):
         loop = asyncio.new_event_loop()
@@ -102,6 +104,7 @@ class ArithHandler(data_base_handler.DataBaseHandler):
                 data_list += f.readlines()
             f.close()
         data_list = [float(i[:-1]) for i in data_list]
+        self.logger.info("get data success!")
         return data_list
 
     async def mpc_calculate(self, curr_mpc, method, data_list):

@@ -45,13 +45,10 @@ class GetConfigHandler(data_base_handler.DataBaseHandler):
                                      "Job status is not ready, please check the requested job", resp_data)
             return
         self.logger.info("Job status OK.")
-        # 1. 建立单独的 log handler 
         job_log_path = os.path.join(self.job_dir, "mpc_application.log")
         self.job_log_handler = get_log_file_handler(job_log_path)
         self.logger.addHandler(self.job_log_handler)
         self.logger.info("Get Config API called")
-
-        # 2. 根据情况取 hash csv  内容
         # TODO 接受ini文件并返回成功
         try:
             config_place = os.path.join(self.job_dir, "config.ini")

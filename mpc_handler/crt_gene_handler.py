@@ -1,12 +1,9 @@
 import argparse
 import os
 from concurrent.futures import ThreadPoolExecutor
-
 from tornado.concurrent import run_on_executor
-
 from mpc_handler.base import data_base_handler
 from utilities import logger
-
 from utilities.generate_certificates import create_key, create_request, create_certificate, save_key, save_certificate
 
 
@@ -15,7 +12,7 @@ class CerGenerateHandler(data_base_handler.DataBaseHandler):
 
     @run_on_executor
     def post(self):
-        logger.info("Start generate crt.")
+        self.logger.info("Start generate crt.")
         parser = argparse.ArgumentParser()
         parser.add_argument('-p', '--prefix',
                             help='output filename prefix')
@@ -34,6 +31,7 @@ class CerGenerateHandler(data_base_handler.DataBaseHandler):
             os.mkdir("config")
         save_key(ca_key, 'config/mpyc_ca.key')
         save_certificate(ca_crt, 'config/mpyc_ca.crt')
+        logger.info("CA certification generated")
         self.return_parse_result(0, 'success', {})
         return 
 
