@@ -1,7 +1,7 @@
 import os 
 
 CPU_COUNT = os.cpu_count() # 用于多线程
-PORT = 7970# mpc comp 的端口
+PORT = 8626# mpc comp 的端口
 
 
 MPC_IP = "127.0.0.1"

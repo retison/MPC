@@ -75,7 +75,7 @@ class DataImportHandler(data_base_handler.DataBaseHandler):
         # 一次注册的数据量过小时
         # 随机放进一个分片中
         if index is None:
-            index = random.choice(list(range(split_count))) 
+            index = 0
         if st_index is None:
             st_index = 0
             ed_index = self.data_length

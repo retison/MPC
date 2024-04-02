@@ -30,7 +30,7 @@ status_msg_dict[DATA_VALUE_ERROR] = 'input data value not correct'
 status_msg_dict[OPERATION_FAILED] = 'MPC operation failed'
 
 action_list = [
-    'data_import', 'data_del', 'job_reg', 'job_query',
+    'data_import', 'data_del', 'job_reg', 'job_query',"sql_data_import",
     'output_import', 'result_get', 'job_log', 'output_get',
     'config_send', 'interaction',
     'ca_import', 'cert_get',
@@ -42,6 +42,7 @@ action_method_dict = {}
 
 action_method_dict["data_import"] = "/1.0/mpc/data/import"
 action_method_dict["data_del"] = "/1.0/mpc/data/delete"
+action_method_dict["sql_data_import"] = "/1.0/mpc/data/SQL_import"
 
 action_method_dict["ca_import"] = "/1.0/mpc/crt/gene_crt"
 action_method_dict["cert_get"] = "/1.0/mpc/crt/get_crt"

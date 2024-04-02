@@ -11,17 +11,19 @@ from mpc_handler.job_log_handler import JobLogHandler
 from mpc_handler.job_query_handler import JobQueryHandler
 from mpc_handler.job_reg_handler import JobRegHandler
 from mpc_handler.config_get_handler import GetConfigHandler
+from mpc_handler.sql_import_handler import SQLImportHandler
 
 
 def get_handlers():
     data_handlers = [
         ("/1.0/mpc/data/import", DataImportHandler, dict(action="data_import")),
         ("/1.0/mpc/data/del", DataDelHandler, dict(action="data_del")),
+        ("/1.0/mpc/data/SQL_import", SQLImportHandler, dict(action="sql_data_import")),
     ]
 
     crt_handlers = [
         ("/1.0/mpc/crt/gene_crt", CerGenerateHandler, dict(action="ca_import")),
-        ("/1.0/mpc/crt/get_crt", GetCertHandler, dict(action="cert_get"))
+        ("/1.0/mpc/crt/get_crt", GetCertHandler, dict(action="cert_get")),
     ]
 
     # TODO order by\limit\group by这三个中前两个还是很有关系的，但不知道该咋办，这三个还是要多思考一会
