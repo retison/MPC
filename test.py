@@ -3,7 +3,7 @@ from config import MPC_IP, MPC_PORT
 from utilities.utilities import send_restful_request
 
 job_request_dict = {
-    "data_list": [ "test_data_2"],
+    "data_list": ["test_data_2"],
     "party_list": [0, 1],
     "mpc_method": "substring,2"
 }

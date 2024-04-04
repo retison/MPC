@@ -1,13 +1,15 @@
 import numpy as np
 
+from mpyc.runtime import mpc
+
 
 def get_operator(operator):
     operators = {
-        'max': lambda x: max(x),
-        'min': lambda x: min(x),
-        'sum': lambda x: sum(x),
+        'max': lambda x: mpc.max(x),
+        'min': lambda x: mpc.min(x),
+        'sum': lambda x: mpc.sum(x),
         'count': lambda x: len(x),
-        'avg': lambda x: np.mean(x)
+        'avg': lambda x: mpc.statistics.mean(x)
     }
     if operator in operators:
         return operators[operator]

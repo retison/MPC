@@ -32,7 +32,7 @@ class DataBaseHandler(tornado.web.RequestHandler):
         # 经过测试可用
         logging.config.fileConfig(logger_config_path)
         tmstmp = str(time.time())
-        logger = logging.getLogger('handler_self_logger' + tmstmp)
+        self.logger = logging.getLogger('handler_self_logger' + tmstmp)
 
     def initialize(self, action, target=None) -> None:
         # print(action)

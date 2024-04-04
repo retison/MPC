@@ -23,7 +23,7 @@ class ArithHandler(data_base_handler.DataBaseHandler):
     def post(self):
         self.create_logger()
         self.logger.info("Start Decode Check.")
-        if self.decode_check(["job_id"], [str]) is False:
+        if self.decode_check(["job_id", "operation", "result_name"], [str, str, str]) is False:
             self.logger.info("Decode Check Failed.")
             self.write(self.res_dict)
             return
@@ -39,8 +39,16 @@ class ArithHandler(data_base_handler.DataBaseHandler):
                                      "Requested job_id NOT exist.", {"requested_job_id": self.job_id})
             return
         self.logger.info("Job exists.")
-        self.mpc_method = self.get_mpc_method()
-        self.logger.info("Get mpc_method: %s." % self.mpc_method)
+        self.operation = self.request_dict["operation"]
+        self.operators = self.extract_variables()
+        for operator in self.operators:
+            if not os.path.exists(os.path.join(self.job_dir, operator)):
+                continue
+            self.return_parse_result(OPERATION_FAILED, \
+                                     f"job {self.job_id} data get failed", {})
+            self.logger.info(f"job {self.job_id} data get failed")
+            return
+
         self.dbm = database_manager(local_db_ip, local_db_port, \
                                     local_db_username, local_db_passwd, local_db_dbname)
         # 检查 job status
@@ -51,50 +59,43 @@ class ArithHandler(data_base_handler.DataBaseHandler):
                                      "Job status is not ready, please check the requested job", resp_data)
             return
         self.logger.info("Job status OK.")
-        # 此时我们有 self.job_dir，需要：
-        # 1. 建立单独的 log handler
         job_log_path = os.path.join(self.job_dir, "mpc_application.log")
+
         self.job_log_handler = get_log_file_handler(job_log_path)
         self.logger.addHandler(self.job_log_handler)
         self.logger.info("Arith API called")
 
-        # TODO 需要先读取本地文件，然后创建一个argv，然后开始mpc.run
-        # TODO 启动即可
-        self.res_list = self.get_data()
-        if self.res_list is None:
-            self.return_parse_result(OPERATION_FAILED, "split too huge", {"is_ok": False})
-            return
-        th = threading.Thread(target=self.abc)
-        with open(f"tmp/job/{self.job_id}/config.ini", 'r') as f:
-            port = f.readlines()
-        f.close()
-        curr_port = -1
-        for i in range(len(port)):
-            if port[i] == 'host = \n':
-                curr_port = re.findall(r"port = (.+?)\n", port[i + 1])[0]
-                break
-        curr_port = int(curr_port, 10)
-        if is_port_available(curr_port):
-            self.return_parse_result(SUCCESS, status_msg_dict[SUCCESS], {})
-            self.logger.info(f"start job {self.job_id} mpc calculate")
-            th.start()
-            return
-        else:
-            self.return_parse_result(OPERATION_FAILED, "port is used.", {})
-            self.logger.info(f"job {self.job_id} mpc calculation start fail!")
+        self.result_list = []
+        self.mpc_calculate(self.operation)
+        self.store_data()
 
-    def abc(self):
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        sys.argv.append(f"-C../tmp/job/{self.job_id}/config.ini")
-        sys.argv.append("-ssl")
-        curr_mpc = runtime.setup()
-        # 在事件循环中运行异步任务
-        loop.run_until_complete(self.mpc_calculate(curr_mpc, self.mpc_method, self.res_list))
-        loop.close()
+        self.return_parse_result(SUCCESS, status_msg_dict[SUCCESS], {})
+        return
 
-    def get_data(self):
+    def mpc_calculate(self, method):
+        key = int(self.get_job_key(self.job_id), 10)
+        secfxp = runtime.mpc.SecFxp(128, 96, key)
+        data_length = -1
+        data_dicts = {}
+        for operator in self.operators:
+            data_list = self.get_data(operator)
+            data_dicts[operator] = data_list
+            data_length = len(data_list)
+        for curr_place in range(data_length):
+            for operator in self.operators:
+                oral_data = data_dicts[operator][curr_place]
+                globals()[operator] = secfxp(oral_data)
+            self.result_list.append(runtime.mpc.run(runtime.mpc.gather(eval(method))))
+        self.logger.info(f"job {self.job_id} mpc calculation finish")
+
+    def extract_variables(self):
+        pattern = r'\b[a-zA-Z_][a-zA-Z0-9_]*\b'
+        variables = re.findall(pattern, self.operation)
+        return variables
+
+    def get_data(self, data_name):
         data_dir = os.path.join(self.job_dir, "data_dicts")
+        data_dir = os.path.join(data_dir, data_name)
         if not os.path.exists(data_dir):
             self.logger.error("data dir is not exists!")
         file_list = os.listdir(data_dir)
@@ -107,13 +108,12 @@ class ArithHandler(data_base_handler.DataBaseHandler):
         self.logger.info("get data success!")
         return data_list
 
-    async def mpc_calculate(self, curr_mpc, method, data_list):
-        await curr_mpc.start()
-        key = int(self.get_job_key(self.job_id), 10)
-        secint = curr_mpc.SecFxp(128, 96, key)
-        input_value = list(map(secint, data_list))
-        input_res = curr_mpc.input(input_value)
-        result = list_operation(input_res, method)
-        await curr_mpc.output(result, receivers=[0])
-        await curr_mpc.shutdown()
-        self.logger.info(f"job {self.job_id} mpc calculation finish")
+    def store_data(self):
+        result_dicts = os.path.join(self.job_dir,"result_dicts")
+        if not os.path.exists(result_dicts):
+            os.makedirs(result_dicts)
+        curr_result_dicts = os.path.join(result_dicts,self.request_dict["result_name"] + ".csv")
+        with open(curr_result_dicts,"w") as f:
+            for data in self.result_list:
+                f.write(str(data) + "\n")
+        f.close()

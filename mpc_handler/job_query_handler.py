@@ -60,9 +60,6 @@ class JobQueryHandler(data_base_handler.DataBaseHandler):
         data_dict = {}
         data_dict["job_id"] = self.job_id
         data_dict["status"] = query_res[0]
-        data_dict["data_list"] = json.loads(query_res[1].replace("\'", '\"'))
-        data_dict["party_list"] = json.loads(query_res[2].replace("\'", '\"'))
-        data_dict["mpc_method"] = query_res[3]
         data_dict["create_time"] = query_res[4]
         data_dict["update_time"] = query_res[5]
         data_dict["start_time"] = query_res[6]

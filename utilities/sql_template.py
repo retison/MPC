@@ -5,9 +5,6 @@ from config import local_db_dbname
 b_mpc_job_create = """CREATE TABLE `b_mpc_job` (
     `id` int NOT NULL AUTO_INCREMENT,
     `job_id` varchar(80) NOT NULL,
-    `job_data` varchar(450) NOT NULL,
-    `job_party` varchar(450) NOT NULL,
-    `mpc_method` varchar(20) NOT NULL,
     `job_key` varchar(300) NOT NULL,
     `status` varchar(45) DEFAULT NULL,
     `create_time` int DEFAULT NULL,
@@ -19,17 +16,16 @@ b_mpc_job_create = """CREATE TABLE `b_mpc_job` (
 );"""
 
 
-def get_mpc_job_insert_sql(job_id, job_data, job_party, mpc_method, key, status, create_time, update_time):
+def get_mpc_job_insert_sql(job_id, key, status, create_time, update_time):
     mpc_job_insert_sql = """INSERT INTO `%s`.`b_mpc_job` 
-    (`job_id`, `job_data`, `job_party`,`mpc_method`, `job_key`, `status`, `create_time`, `update_time`)
-    VALUES ("%s", "%s", "%s", "%s", "%s", "%s", "%s","%s"); """ % \
-                         (local_db_dbname, job_id, job_data, job_party, mpc_method, key, status, create_time,
-                          update_time)
+    (`job_id`, `job_key`, `status`, `create_time`, `update_time`)
+    VALUES ("%s", "%s", "%s", "%s", "%s"); """ % \
+                         (local_db_dbname, job_id, key, status, create_time,update_time)
     return mpc_job_insert_sql
 
 
 def get_mpc_job_query_sql(job_id):
-    sql = '''SELECT status, job_data, job_party, mpc_method, create_time, update_time, start_time, end_time FROM 
+    sql = '''SELECT status, create_time, update_time, start_time, end_time FROM 
     %s.b_mpc_job where job_id = "%s"; ''' % (
         local_db_dbname, job_id)
     return sql

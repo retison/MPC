@@ -4,14 +4,13 @@ import re
 import sys
 import threading
 from concurrent.futures import ThreadPoolExecutor
-
 from tornado.concurrent import run_on_executor
 
-from config import local_db_passwd, local_db_ip, local_db_dbname, local_db_port, local_db_username, MPC_PORT
+from config import CPU_COUNT, local_db_passwd, local_db_ip, local_db_dbname, local_db_port, local_db_username, MPC_PORT
 from config import mpc_job_dir
-from flow_control.mpc_aggre.utils import list_operation
+from flow_control.mpc_aggre.utils import get_operator
 from mpc_handler.base import data_base_handler
-from mpc_handler.utils import  is_port_available
+from mpc_handler.utils import list_operation, is_port_available
 import mpyc.runtime as runtime
 from utilities.database_manager import database_manager
 from utilities.status_code import *
@@ -25,11 +24,12 @@ class AggreHandler(data_base_handler.DataBaseHandler):
     def post(self):
         self.create_logger()
         self.logger.info("Start Decode Check.")
-        if self.decode_check(["job_id"], [str]) is False:
+        if self.decode_check(["job_id", "operation", "result_name"], [str, str, str]) is False:
             self.logger.info("Decode Check Failed.")
             self.write(self.res_dict)
             return
         self.logger.info("Decode Check Success.")
+        # 取数据
         # 取数据
         self.job_id = self.request_dict["job_id"]
         self.job_dir = os.path.join(mpc_job_dir, self.job_id)
@@ -41,8 +41,22 @@ class AggreHandler(data_base_handler.DataBaseHandler):
                                      "Requested job_id NOT exist.", {"requested_job_id": self.job_id})
             return
         self.logger.info("Job exists.")
-        self.mpc_method = self.get_mpc_method()
-        self.logger.info("Get mpc_method: %s." % self.mpc_method)
+        self.operation = self.request_dict["operation"]
+        self.operators = self.extract_variables(self.operation)
+        aggre_operations = ["sum","max","min","count","avg"]
+        for aggre_operation in aggre_operations:
+            try:
+                self.operators.remove(aggre_operation)
+            except:
+                pass
+        for operator in self.operators:
+            if not os.path.exists(os.path.join(self.job_dir, operator)):
+                continue
+            self.return_parse_result(OPERATION_FAILED, \
+                                     f"job {self.job_id} data get failed", {})
+            self.logger.info(f"job {self.job_id} data get failed")
+            return
+
         self.dbm = database_manager(local_db_ip, local_db_port, \
                                     local_db_username, local_db_passwd, local_db_dbname)
         # 检查 job status
@@ -53,50 +67,42 @@ class AggreHandler(data_base_handler.DataBaseHandler):
                                      "Job status is not ready, please check the requested job", resp_data)
             return
         self.logger.info("Job status OK.")
-        # 此时我们有 self.job_dir，需要：
-        # 1. 建立单独的 log handler
         job_log_path = os.path.join(self.job_dir, "mpc_application.log")
+
         self.job_log_handler = get_log_file_handler(job_log_path)
         self.logger.addHandler(self.job_log_handler)
-        self.logger.info("Integer API called")
+        self.logger.info("Arith API called")
 
-        # TODO 需要先读取本地文件，然后创建一个argv，然后开始mpc.run
-        # TODO 启动即可
-        self.res_list = self.get_data()
-        if self.res_list is None:
-            self.return_parse_result(OPERATION_FAILED, "split too huge", {})
-            return
-        th = threading.Thread(target=self.mpc_calculation)
-        with open(f"tmp/job/{self.job_id}/config.ini", 'r') as f:
-            port = f.readlines()
-        f.close()
-        curr_port = -1
-        for i in range(len(port)):
-            if port[i] == 'host = \n':
-                curr_port = re.findall(r"port = (.+?)\n", port[i + 1])[0]
-                break
-        curr_port = int(curr_port, 10)
-        if is_port_available(curr_port):
-            self.return_parse_result(SUCCESS, status_msg_dict[SUCCESS], {})
-            self.logger.info(f"start job {self.job_id} mpc calculate")
-            th.start()
-            return
-        else:
-            self.return_parse_result(OPERATION_FAILED, "port is used.", {})
-            self.logger.info(f"job {self.job_id} mpc calculation start fail!")
+        self.result_list = []
+        self.arith = 0
+        self.mpc_calculate(self.operation)
+        self.store_data()
 
-    def mpc_calculation(self):
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        sys.argv.append(f"-C../tmp/job/{self.job_id}/config.ini")
-        sys.argv.append("-ssl")
-        curr_mpc = runtime.setup()
-        # 在事件循环中运行异步任务
-        loop.run_until_complete(self.mpc_calculate(curr_mpc, self.mpc_method, self.res_list))
-        loop.close()
+        self.return_parse_result(SUCCESS, status_msg_dict[SUCCESS], {})
+        return
 
-    def get_data(self):
+    def mpc_calculate(self, method):
+        key = int(self.get_job_key(self.job_id), 10)
+        secfxp = runtime.mpc.SecFxp(128, 96, key)
+        data_dicts = {}
+        for operator in self.operators:
+            print(operator)
+            data_list = self.get_data(operator)
+            data_dicts[operator] = list(map(secfxp,data_list))
+        result, variables = self.get_mpc_operation(method, data_dicts)
+        print(eval(result,variables))
+        self.result_list.append(runtime.mpc.run(runtime.mpc.output(eval(result,variables))))
+        print(self.result_list)
+        self.logger.info(f"job {self.job_id} mpc calculation finish")
+
+    def extract_variables(self,operation):
+        pattern = r'\b[a-zA-Z_][a-zA-Z0-9_]*\b'
+        variables = re.findall(pattern, operation)
+        return variables
+
+    def get_data(self, data_name):
         data_dir = os.path.join(self.job_dir, "data_dicts")
+        data_dir = os.path.join(data_dir, data_name)
         if not os.path.exists(data_dir):
             self.logger.error("data dir is not exists!")
         file_list = os.listdir(data_dir)
@@ -109,13 +115,51 @@ class AggreHandler(data_base_handler.DataBaseHandler):
         self.logger.info("get data success!")
         return data_list
 
-    async def mpc_calculate(self, curr_mpc, method, data_list):
-        await curr_mpc.start()
-        key = int(self.get_job_key(self.job_id), 10)
-        secint = curr_mpc.SecFxp(128, 96, key)
-        result = list_operation(data_list, method)
-        input_value = secint(result)
-        input_res = curr_mpc.input(input_value,senders=[1])
-        await curr_mpc.output(input_res, receivers=[0])
-        await curr_mpc.shutdown()
-        self.logger.info(f"job {self.job_id} mpc calculation finish")
+    def store_data(self):
+        result_dicts = os.path.join(self.job_dir, "result_dicts")
+        if not os.path.exists(result_dicts):
+            os.makedirs(result_dicts)
+        curr_result_dicts = os.path.join(result_dicts, self.request_dict["result_name"] + ".csv")
+        with open(curr_result_dicts, "w") as f:
+            for data in self.result_list:
+                f.write(str(data) + "\n")
+        f.close()
+
+    def get_mpc_operation(self,text, variables):
+        pattern = r'(max|min|count|avg|sum)\((.*?)\)'
+        functions = {
+            'max': lambda x: runtime.mpc.max(x),
+            'min': lambda x: runtime.mpc.min(x),
+            'sum': lambda x: runtime.mpc.sum(x),
+            'count': lambda x: len(x),
+            'avg': lambda x: runtime.mpc.statistics.mean(x)
+        }
+        def arith_operation(text,variables):
+            result = []
+            operators = self.extract_variables(text)
+            length = len(variables[operators[0]])
+            for curr_place in range(length):
+                for operator in operators:
+                    locals()[operator] = variables[operator][curr_place]
+                result.append(eval(text))
+            variables[f"arith{self.arith}"] = result
+            self.arith += 1
+            return f"arith{self.arith-1}"
+
+        def replace_function(match):
+            func_name, args = match.groups()
+            data_name = args
+            if args not in variables:
+                data_name = arith_operation(args,variables)
+            # 调用加密类的函数获取结果
+            result = functions[func_name](variables[data_name])
+            # 创建新变量存储结果，并返回新变量名
+            new_var_name = f'{data_name}_{func_name}_result'
+            variables[new_var_name] = result
+            return new_var_name
+
+        # 使用正则表达式替换函数调用
+        result = re.sub(pattern, replace_function, text)
+
+        return result, variables
+

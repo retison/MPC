@@ -23,10 +23,13 @@ def get_handlers():
 
     crt_handlers = [
         ("/1.0/mpc/crt/gene_crt", CerGenerateHandler, dict(action="ca_import")),
-        ("/1.0/mpc/crt/get_crt", GetCertHandler, dict(action="cert_get")),
+        ("/1.0/mpc/crt/get_crt", GetCertHandler, dict(action="cert_get"))
     ]
 
     # TODO order by\limit\group by这三个中前两个还是很有关系的，但不知道该咋办，这三个还是要多思考一会
+    # TODO 需要修改job_reg，流程为首先创建数据然后创建任务，然后分发到各个参与方，各个参与方根据select主体分析数据，最后有一个output接口用于接受数据
+    # TODO 需要新增share接口，将数据分享到所有参与方，所有参与方再根据式子得到结果
+    # TODO 修改两个handler读取数据的方式，目前还仅仅是直接读取然后揭秘
     job_handlers = [
         ("/1.0/mpc/job/reg", JobRegHandler, dict(action="job_reg")),
         ("/1.0/mpc/job/query", JobQueryHandler, dict(action="job_query")),  # 查询任务状态
