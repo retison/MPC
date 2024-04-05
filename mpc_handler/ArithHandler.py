@@ -1,6 +1,8 @@
+import asyncio
 import os
 import random
 import re
+import sys
 from concurrent.futures import ThreadPoolExecutor
 from tornado.concurrent import run_on_executor
 
@@ -21,7 +23,7 @@ class ArithHandler(data_base_handler.DataBaseHandler):
     def post(self):
         self.create_logger()
         self.logger.info("Start Decode Check.")
-        if self.decode_check(["job_id", "operation", "result_name"], [str, str, str]) is False:
+        if self.decode_check(["job_id", "operation", "result_name"], [str, list, list]) is False:
             self.logger.info("Decode Check Failed.")
             self.write(self.res_dict)
             return
@@ -38,15 +40,20 @@ class ArithHandler(data_base_handler.DataBaseHandler):
             return
         self.logger.info("Job exists.")
         self.operation = self.request_dict["operation"]
+        self.result_name = self.request_dict["result_name"]
+        if len(self.result_name) != len(self.operation):
+            self.return_parse_result(OPERATION_FAILED, \
+                                     f"task name is not equal to task num", {})
+            return
         self.operators = self.extract_variables()
         for operator in self.operators:
-            if not os.path.exists(os.path.join(self.job_dir, operator)):
-                continue
-            self.return_parse_result(OPERATION_FAILED, \
-                                     f"job {self.job_id} data get failed", {})
-            self.logger.info(f"job {self.job_id} data get failed")
-            return
-
+            for element in operator:
+                if not os.path.exists(os.path.join(self.job_dir, element)):
+                    continue
+                self.return_parse_result(OPERATION_FAILED, \
+                                         f"job {self.job_id} data get failed", {})
+                self.logger.info(f"job {self.job_id} data get failed")
+                return
         self.dbm = database_manager(local_db_ip, local_db_port, \
                                     local_db_username, local_db_passwd, local_db_dbname)
         # 检查 job status
@@ -62,36 +69,47 @@ class ArithHandler(data_base_handler.DataBaseHandler):
         self.job_log_handler = get_log_file_handler(job_log_path)
         self.logger.addHandler(self.job_log_handler)
         self.logger.info("Arith API called")
-
-        self.result_list = []
-        self.mpc_calculate(self.operation)
-        self.store_data()
-
+        self.execute_at_backend(self.calculation_job())
         self.return_parse_result(SUCCESS, status_msg_dict[SUCCESS], {})
         return
 
-    def mpc_calculate(self, method):
+    def calculation_job(self):
         key = int(self.get_job_key(self.job_id), 10)
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        for task in range(len(self.operation)):
+            curr_mpc = runtime.setup()
+            loop.run_until_complete(self.mpc_calculate(self.operation[task], curr_mpc, key,self.operators[task],self.result_name[task]))
+        loop.close()
+        self.change_job_status(self.job_id,"success")
+
+    async def mpc_calculate(self, method, mpc, key,operators,result_name):
         data_length = -1
         data_dicts = {}
-        secfxp = runtime.mpc.SecFxp(128, 96, key)
-        for operator in self.operators:
+        curr_result_list = []
+        secfxp = mpc.SecFxp(128, 96, key)
+        for operator in operators:
             data_list = self.get_data(operator)
             data_dicts[operator] = data_list
             data_length = len(data_list)
         for curr_place in range(data_length):
             variables = {}
-            for operator in self.operators:
+            for operator in operators:
                 a = secfxp(10)
                 a.share.value = data_dicts[operator][curr_place]
                 variables[operator] = a
-            self.result_list.append(eval(method,variables))
-        self.result_list = runtime.mpc.run(runtime.mpc.gather(self.result_list))
+            result = eval(method, variables)
+            curr_result_list.append(result)
+        curr_result_list = await mpc.gather(curr_result_list)
+        self.store_data(curr_result_list, result_name)
         self.logger.info(f"job {self.job_id} mpc calculation finish")
 
     def extract_variables(self):
         pattern = r'\b[a-zA-Z_][a-zA-Z0-9_]*\b'
-        variables = re.findall(pattern, self.operation)
+        variables = []
+        for operation in self.operation:
+            variable = re.findall(pattern, operation)
+            variables.append(variable)
         return variables
 
     def get_data(self, data_name):
@@ -109,12 +127,12 @@ class ArithHandler(data_base_handler.DataBaseHandler):
         self.logger.info("get data success!")
         return data_list
 
-    def store_data(self):
-        result_dicts = os.path.join(self.job_dir,"result_dicts")
+    def store_data(self, result_list,name):
+        result_dicts = os.path.join(self.job_dir, "result_dicts")
         if not os.path.exists(result_dicts):
             os.makedirs(result_dicts)
-        curr_result_dicts = os.path.join(result_dicts,self.request_dict["result_name"] + ".csv")
-        with open(curr_result_dicts,"w") as f:
-            for data in self.result_list:
+        curr_result_dicts = os.path.join(result_dicts, name + ".csv")
+        with open(curr_result_dicts, "w") as f:
+            for data in result_list:
                 f.write(str(data) + "\n")
         f.close()

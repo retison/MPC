@@ -10,15 +10,13 @@ from config import MPC_IP, MPC_PORT
 from utilities.utilities import send_restful_request
 
 job_request_dict = {
-    "job_id" : "20240404225931805_host",
-    "data_list": ["LEAGUE_CREATOR_DEP_x_ca5c", "PARTNER2_EMP_x_6630"],
-    "operation": "LEAGUE_CREATOR_DEP_x_ca5c + PARTNER2_EMP_x_6630" ,
-    "result_name" : "zheshi"
+    'job_id': '20240405202519465_host', 'operation': ['sum(PARTNER2_EMP_x_6630)+min(LEAGUE_CREATOR_DEP_x_ca5c)'], 'result_name': ['mpc_result_0']
 }
 
 print("\n")
-method_url = "/1.0/mpc/job/arith"
+method_url = "/1.0/mpc/job/aggre"
 url = "http://{}:{}".format(MPC_IP, MPC_PORT) + method_url
+print(url)
 success, response = send_restful_request(url, job_request_dict)
 print(success,response)
 # job_id = response['data']['job_id']
