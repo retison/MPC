@@ -1,8 +1,6 @@
-import asyncio
 import os
+import random
 import re
-import sys
-import threading
 from concurrent.futures import ThreadPoolExecutor
 from tornado.concurrent import run_on_executor
 
@@ -74,18 +72,21 @@ class ArithHandler(data_base_handler.DataBaseHandler):
 
     def mpc_calculate(self, method):
         key = int(self.get_job_key(self.job_id), 10)
-        secfxp = runtime.mpc.SecFxp(128, 96, key)
         data_length = -1
         data_dicts = {}
+        secfxp = runtime.mpc.SecFxp(128, 96, key)
         for operator in self.operators:
             data_list = self.get_data(operator)
             data_dicts[operator] = data_list
             data_length = len(data_list)
         for curr_place in range(data_length):
+            variables = {}
             for operator in self.operators:
-                oral_data = data_dicts[operator][curr_place]
-                globals()[operator] = secfxp(oral_data)
-            self.result_list.append(runtime.mpc.run(runtime.mpc.gather(eval(method))))
+                a = secfxp(10)
+                a.share.value = data_dicts[operator][curr_place]
+                variables[operator] = a
+            self.result_list.append(eval(method,variables))
+        self.result_list = runtime.mpc.run(runtime.mpc.gather(self.result_list))
         self.logger.info(f"job {self.job_id} mpc calculation finish")
 
     def extract_variables(self):
@@ -104,7 +105,7 @@ class ArithHandler(data_base_handler.DataBaseHandler):
             with open(os.path.join(data_dir, lis), "r") as f:
                 data_list += f.readlines()
             f.close()
-        data_list = [float(i[:-1]) for i in data_list]
+        data_list = [int(i[:-1]) for i in data_list]
         self.logger.info("get data success!")
         return data_list
 

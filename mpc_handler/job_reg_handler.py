@@ -11,6 +11,7 @@ from config import mpc_job_dir
 from mpc_handler.base import data_base_handler
 from mpc_handler.utils import generate_prim
 from mpyc import runtime
+from mpyc.runtime import mpc
 from utilities import logger
 from utilities.database_manager import database_manager
 from utilities.sql_template import get_mpc_job_insert_sql
@@ -26,12 +27,14 @@ class JobRegHandler(data_base_handler.DataBaseHandler):
     def post(self):
         self.create_logger()
         logger.info("Start Decode Check.")
-        if self.decode_check(["job_id", "data_list", "data_length","config"], [str, list, int,str]) is False:
+        if self.decode_check(["job_id", "data_list", "data_length","config","data_from"],
+                             [str, list, int,str,list]) is False:
             logger.info("Decode Check Failed.")
             self.write(self.res_dict)
             return
         logger.info("Decode Check Success.")
         self.data_list = self.request_dict["data_list"]
+        self.data_from = self.request_dict["data_from"]
         self.data_length = self.request_dict["data_length"]
         self.job_id = self.request_dict["job_id"] + "_host"
         if "key" in self.request_dict.keys():
@@ -54,9 +57,7 @@ class JobRegHandler(data_base_handler.DataBaseHandler):
             with open(config_place, "w") as f:
                 f.write(config)
             f.close()
-            self.return_parse_result(SUCCESS, status_msg_dict[SUCCESS], {"job_id": self.job_id})
             self.logger.info("Get config API finished.")
-            return
         except:
             self.logger.error("have not gotten the config.")
             self.return_parse_result(OPERATION_FAILED, \
@@ -76,7 +77,6 @@ class JobRegHandler(data_base_handler.DataBaseHandler):
         else:
             self.return_parse_result(OPERATION_FAILED, \
                                      status_msg_dict[OPERATION_FAILED] + ": job database insert failed", {})
-
         self.execute_at_backend(self.abc)  # 后台执行
         return
 
@@ -90,19 +90,22 @@ class JobRegHandler(data_base_handler.DataBaseHandler):
         result_dir = os.path.join(self.job_dir, "data_dicts")
         if not os.path.exists(result_dir):
             os.makedirs(result_dir)
-        for data_id in self.data_list:
-            curr_data_dir = os.path.join(data_dir, data_id)
-            curr_result_dirt = os.path.join(result_dir, data_id)
-            if not os.path.join(curr_result_dirt):
-                os.makedirs(curr_result_dirt)
+        for data_id in range(len(self.data_list)):
+            curr_data_dir = os.path.join(data_dir,self.data_list[data_id])
+            job_data_name = self.data_list[data_id].split("_")[:-1]
+            job_data_name = '_'.join(job_data_name)
+            curr_result_dir = os.path.join(result_dir,job_data_name)
+            if not os.path.exists(curr_result_dir):
+                os.makedirs(curr_result_dir)
             if os.path.exists(curr_data_dir):
-                res_list = self.get_data(data_id)
+                res_list = self.get_data(self.data_list[data_id])
             else:
                 res_list = [0] * self.data_length
-                # 在事件循环中运行异步任务
-            loop.run_until_complete(self.mpc_calculate(curr_mpc, res_list, curr_result_dirt))
+            loop.run_until_complete(self.mpc_calculate(curr_mpc, res_list, curr_result_dir, self.data_from[data_id]))
         loop.close()
         self.change_job_status(self.job_id, "running")
+
+
 
     def get_data(self, data_id):
         data_dir = os.path.join(mpc_data_dir, data_id)
@@ -118,16 +121,16 @@ class JobRegHandler(data_base_handler.DataBaseHandler):
         logger.info("get data success!")
         return data_list
 
-    async def mpc_calculate(self, curr_mpc, data_list, result_dir):
+    async def mpc_calculate(self, curr_mpc, data_list, result_dir, data_from):
         await curr_mpc.start()
         key = int(self.get_job_key(self.job_id), 10)
         secint = curr_mpc.SecFxp(128, 96, key)
         input_value = list(map(secint, data_list))
-        input_res = curr_mpc.input(input_value)
-        result = await curr_mpc.gather(input_res[0])
+        input_res = curr_mpc.input(input_value,senders=[data_from])
         await curr_mpc.shutdown()
+        result = await curr_mpc.gather(input_res[0])
         with open(os.path.join(result_dir, "split.csv"), "w") as f:
-            for data in result[0]:
+            for data in result:
                 f.write(str(data) + "\n")
             f.close()
         logger.info(f"job {self.job_id} mpc calculation finish")

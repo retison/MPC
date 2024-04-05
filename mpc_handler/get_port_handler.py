@@ -17,21 +17,6 @@ class PortGetHandler(data_base_handler.DataBaseHandler):
 
     @run_on_executor
     def post(self):
-        if self.decode_check(["job_id"], [str]) is False:
-            logger.info("Decode Check Failed.")
-            self.write(self.res_dict)
-            return
-        job_id = self.request_dict["job_id"]
-        select_sql = '''
-                    SELECT job_id FROM %s.b_mpc_job where job_id = "%s";''' % (
-            local_db_dbname, job_id)
-        self.dbm = database_manager(local_db_ip, local_db_port,
-                                    local_db_username, local_db_passwd, local_db_dbname)
-        query_res = self.dbm.query(select_sql)
-        if len(query_res) == 0:
-            self.return_parse_result(OPERATION_FAILED,
-                                     "Requested job_id NOT exist.", {"job_id": job_id})
-            return
         try:
             sock = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
             sock.bind(("localhost",0))
@@ -42,7 +27,7 @@ class PortGetHandler(data_base_handler.DataBaseHandler):
             self.return_parse_result(0, 'success', {"port": port})
             return
         except:
-            self.return_parse_result(OPERATION_FAILED, "There is not free port", {"job_id": job_id})
+            self.return_parse_result(OPERATION_FAILED, "There is not free port", {})
             return
 
 

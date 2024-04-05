@@ -60,7 +60,7 @@ class SQLImportHandler(data_base_handler.DataBaseHandler):
             logger.info("Start write with split.")
             self.write_data_with_split()
             logger.info("Write Success.")
-        self.return_parse_result(0, 'success', {})
+        self.return_parse_result(0, 'success', {"data_length": self.data_length})
         return
 
     def write_data_with_split(self):

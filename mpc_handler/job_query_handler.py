@@ -47,7 +47,6 @@ class JobQueryHandler(data_base_handler.DataBaseHandler):
         query_res = self.dbm.query(job_query_sql)
         self.logger.debug("The query result is: %s." % query_res)
         # 检查状态之后返回
-        
         # 准备返回
         if len(query_res) == 0:
             self.logger.error("The query result is empty.")
@@ -60,10 +59,10 @@ class JobQueryHandler(data_base_handler.DataBaseHandler):
         data_dict = {}
         data_dict["job_id"] = self.job_id
         data_dict["status"] = query_res[0]
-        data_dict["create_time"] = query_res[4]
-        data_dict["update_time"] = query_res[5]
-        data_dict["start_time"] = query_res[6]
-        data_dict["end_time"] = query_res[7]
+        data_dict["create_time"] = query_res[1]
+        data_dict["update_time"] = query_res[2]
+        data_dict["start_time"] = query_res[3]
+        data_dict["end_time"] = query_res[4]
         # 返回结果
         self.return_parse_result(SUCCESS, status_msg_dict[SUCCESS], data_dict)
         return 

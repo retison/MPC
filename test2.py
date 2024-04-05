@@ -10,14 +10,14 @@ from config import MPC_IP, MPC_PORT
 from utilities.utilities import send_restful_request
 
 job_request_dict = {
-    "job_id" : "20240326215929697_f844e7",
-    "data_list": ["test1", "test_2"],
-    "operation": "max(test1+test2) + min(test2)" ,
+    "job_id" : "20240404225931805_host",
+    "data_list": ["LEAGUE_CREATOR_DEP_x_ca5c", "PARTNER2_EMP_x_6630"],
+    "operation": "LEAGUE_CREATOR_DEP_x_ca5c + PARTNER2_EMP_x_6630" ,
     "result_name" : "zheshi"
 }
 
 print("\n")
-method_url = "/1.0/mpc/job/aggre"
+method_url = "/1.0/mpc/job/arith"
 url = "http://{}:{}".format(MPC_IP, MPC_PORT) + method_url
 success, response = send_restful_request(url, job_request_dict)
 print(success,response)

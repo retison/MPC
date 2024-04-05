@@ -42,8 +42,6 @@ def get_handlers():
         # 中间结果的获取函数
         ("/1.0/mpc/job/output/get", OutputGetHandler, dict(action="output_get")),
 
-        ("/1.0/mpc/result/get", OutputGetHandler, dict(action="result_get")),
-
     ]
 
     default_handlers = [

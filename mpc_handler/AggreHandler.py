@@ -86,13 +86,16 @@ class AggreHandler(data_base_handler.DataBaseHandler):
         secfxp = runtime.mpc.SecFxp(128, 96, key)
         data_dicts = {}
         for operator in self.operators:
-            print(operator)
             data_list = self.get_data(operator)
-            data_dicts[operator] = list(map(secfxp,data_list))
+            data_dicts[operator] = []
+            for i in data_list:
+                change_data = secfxp(10)
+                change_data.share.value = i
+                data_dicts[operator].append(change_data)
         result, variables = self.get_mpc_operation(method, data_dicts)
-        print(eval(result,variables))
-        self.result_list.append(runtime.mpc.run(runtime.mpc.output(eval(result,variables))))
-        print(self.result_list)
+        all_result_name = self.arith_operation(result,variables)
+        all_result = variables[all_result_name]
+        self.result_list.append(runtime.mpc.run(runtime.mpc.gather(all_result)))
         self.logger.info(f"job {self.job_id} mpc calculation finish")
 
     def extract_variables(self,operation):
@@ -121,9 +124,23 @@ class AggreHandler(data_base_handler.DataBaseHandler):
             os.makedirs(result_dicts)
         curr_result_dicts = os.path.join(result_dicts, self.request_dict["result_name"] + ".csv")
         with open(curr_result_dicts, "w") as f:
-            for data in self.result_list:
+            for data in self.result_list[0]:
                 f.write(str(data) + "\n")
         f.close()
+        self.logger.info("store data success")
+
+    def arith_operation(self,text, variables):
+        result = []
+        operators = self.extract_variables(text)
+        length = len(variables[operators[0]])
+        for curr_place in range(length):
+            curr_variables = {}
+            for operator in operators:
+                curr_variables[operator] = variables[operator][curr_place]
+            result.append(eval(text, curr_variables))
+        variables[f"arith{self.arith}"] = result
+        self.arith += 1
+        return f"arith{self.arith - 1}"
 
     def get_mpc_operation(self,text, variables):
         pattern = r'(max|min|count|avg|sum)\((.*?)\)'
@@ -134,30 +151,18 @@ class AggreHandler(data_base_handler.DataBaseHandler):
             'count': lambda x: len(x),
             'avg': lambda x: runtime.mpc.statistics.mean(x)
         }
-        def arith_operation(text,variables):
-            result = []
-            operators = self.extract_variables(text)
-            length = len(variables[operators[0]])
-            for curr_place in range(length):
-                for operator in operators:
-                    locals()[operator] = variables[operator][curr_place]
-                result.append(eval(text))
-            variables[f"arith{self.arith}"] = result
-            self.arith += 1
-            return f"arith{self.arith-1}"
 
         def replace_function(match):
             func_name, args = match.groups()
             data_name = args
             if args not in variables:
-                data_name = arith_operation(args,variables)
+                data_name = self.arith_operation(args,variables)
             # 调用加密类的函数获取结果
             result = functions[func_name](variables[data_name])
             # 创建新变量存储结果，并返回新变量名
             new_var_name = f'{data_name}_{func_name}_result'
             variables[new_var_name] = result
             return new_var_name
-
         # 使用正则表达式替换函数调用
         result = re.sub(pattern, replace_function, text)
 
