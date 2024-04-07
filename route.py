@@ -31,6 +31,7 @@ def get_handlers():
     # TODO 需要新增share接口，将数据分享到所有参与方，所有参与方再根据式子得到结果
     # TODO 修改两个handler读取数据的方式，目前还仅仅是直接读取然后揭秘
     job_handlers = [
+        ("/1.0/mpc/job/create", JobRegHandler, dict(action="job_create")),
         ("/1.0/mpc/job/reg", JobRegHandler, dict(action="job_reg")),
         ("/1.0/mpc/job/query", JobQueryHandler, dict(action="job_query")),  # 查询任务状态
         ("/1.0/mpc/log/get", JobLogHandler, dict(action="job_log")),  # 获取任务日志

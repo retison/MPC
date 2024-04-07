@@ -31,7 +31,7 @@ status_msg_dict[OPERATION_FAILED] = 'MPC operation failed'
 
 action_list = [
     'data_import', 'data_del', 'job_reg', 'job_query',"sql_data_import",
-    'output_import', 'result_get', 'job_log', 'output_get',
+    'output_import', 'result_get', 'job_log', 'output_get',"job_create",
     'config_send', 'interaction',
     'ca_import', 'cert_get',
     'handle_arith', 'get_port', "handle_aggre", "handle_substr",
@@ -48,6 +48,7 @@ action_method_dict["ca_import"] = "/1.0/mpc/crt/gene_crt"
 action_method_dict["cert_get"] = "/1.0/mpc/crt/get_crt"
 
 action_method_dict['job_reg'] = "/1.0/mpc/job/reg"
+action_method_dict["job_create"] = "/1.0/mpc/job/create"
 action_method_dict['job_query'] = "/1.0/mpc/job/query"
 action_method_dict['job_log'] = "/1.0/mpc/log/get"
 

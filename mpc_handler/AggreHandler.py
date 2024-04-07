@@ -49,11 +49,9 @@ class AggreHandler(data_base_handler.DataBaseHandler):
         self.operators = self.extract_variables(None)
         aggre_operations = ["sum","max","min","count","avg"]
         for aggre_operation in aggre_operations:
-            try:
-                for operator in self.operators:
+            for operator in self.operators:
+                if aggre_operation in operator:
                     operator.remove(aggre_operation)
-            except:
-                pass
         for operator in self.operators:
             for element in operator:
                 if not os.path.exists(os.path.join(self.job_dir, element)):
@@ -66,13 +64,13 @@ class AggreHandler(data_base_handler.DataBaseHandler):
         self.dbm = database_manager(local_db_ip, local_db_port, \
                                     local_db_username, local_db_passwd, local_db_dbname)
         # 检查 job status
-        # job_status = self.get_job_status()
-        # if job_status != "ready" and job_status != "running":
-        #     resp_data = {"requested_job_status": job_status}
-        #     self.return_parse_result(OPERATION_FAILED, \
-        #                              "Job status is not ready, please check the requested job", resp_data)
-        #     return
-        # self.logger.info("Job status OK.")
+        job_status = self.get_job_status()
+        if job_status != "ready" and job_status != "running":
+            resp_data = {"requested_job_status": job_status}
+            self.return_parse_result(OPERATION_FAILED, \
+                                     "Job status is not ready, please check the requested job", resp_data)
+            return
+        self.logger.info("Job status OK.")
         job_log_path = os.path.join(self.job_dir, "mpc_application.log")
 
         self.job_log_handler = get_log_file_handler(job_log_path)
