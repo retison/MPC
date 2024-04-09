@@ -105,6 +105,7 @@ class JobRegHandler(data_base_handler.DataBaseHandler):
             return
 
     def abc(self):
+        logger.info("Start share data")
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         sys.argv.append(f"-C../tmp/job/{self.job_id}/config.ini")
@@ -122,10 +123,12 @@ class JobRegHandler(data_base_handler.DataBaseHandler):
             if not os.path.exists(curr_result_dir):
                 os.makedirs(curr_result_dir)
             if os.path.exists(curr_data_dir):
+                logger.info(f"share {data_id}")
                 res_list = self.get_data(self.data_list[data_id])
             else:
                 res_list = [0] * self.data_length
             loop.run_until_complete(self.mpc_calculate(curr_mpc, res_list, curr_result_dir, self.data_from[data_id]))
+        logger.info("wait for data share finish")
         loop.close()
         self.change_job_status(self.job_id, "running")
 
@@ -148,8 +151,8 @@ class JobRegHandler(data_base_handler.DataBaseHandler):
     async def mpc_calculate(self, curr_mpc, data_list, result_dir, data_from):
         await curr_mpc.start()
         key = int(self.get_job_key(self.job_id), 10)
-        secint = curr_mpc.SecFxp(128, 96, key)
-        input_value = list(map(secint, data_list))
+        secfxp = curr_mpc.SecFxp(128, 96, key)
+        input_value = list(map(secfxp, data_list))
         input_res = curr_mpc.input(input_value,senders=[data_from])
         await curr_mpc.shutdown()
         result = await curr_mpc.gather(input_res[0])

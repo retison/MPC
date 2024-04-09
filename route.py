@@ -27,9 +27,7 @@ def get_handlers():
     ]
 
     # TODO order by\limit\group by这三个中前两个还是很有关系的，但不知道该咋办，这三个还是要多思考一会
-    # TODO 需要修改job_reg，流程为首先创建数据然后创建任务，然后分发到各个参与方，各个参与方根据select主体分析数据，最后有一个output接口用于接受数据
-    # TODO 需要新增share接口，将数据分享到所有参与方，所有参与方再根据式子得到结果
-    # TODO 修改两个handler读取数据的方式，目前还仅仅是直接读取然后揭秘
+    # TODO 需要增加字符串相关计算，需要增加本地的limit\order by\share
     job_handlers = [
         ("/1.0/mpc/job/create", JobRegHandler, dict(action="job_create")),
         ("/1.0/mpc/job/reg", JobRegHandler, dict(action="job_reg")),
@@ -40,7 +38,7 @@ def get_handlers():
         ("/1.0/mpc/job/arith", ArithHandler, dict(action="handle_arith")),
         ("/1.0/mpc/job/get_port", PortGetHandler, dict(action="get_port")),
         ("/1.0/mpc/job/aggre", AggreHandler, dict(action="handle_aggre")),
-        # 中间结果的获取函数
+        # 结果的获取函数
         ("/1.0/mpc/job/output/get", OutputGetHandler, dict(action="output_get")),
 
     ]

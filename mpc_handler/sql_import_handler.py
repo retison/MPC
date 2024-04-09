@@ -40,10 +40,6 @@ class SQLImportHandler(data_base_handler.DataBaseHandler):
         self.dbm = database_manager(local_db_ip, local_db_port, \
                                     local_db_username, local_db_passwd, local_db_dbname)
         self.data_list = self.dbm.query(sql)
-        # self.data_list = [data[0] for data in self.data_list]
-        # # 这里就要去重复！
-        # # TODO 调试时候去掉，后面再加回来
-        # self.data_list = list(set(self.data_list))
         psi_ip = self.request_dict["psi_ip"]
         psi_port = self.request_dict["psi_port"]
         job_id = self.request_dict["job_id"]
