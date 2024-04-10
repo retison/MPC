@@ -62,7 +62,7 @@ class OutputGetHandler(data_base_handler.DataBaseHandler):
         self.job_log_handler = get_log_file_handler(job_log_path)
         self.logger.addHandler(self.job_log_handler)
         self.logger.info("Get Intermediate Result API called")
-        self.change_job_status(self.job_id,"running")
+        self.change_job_status(self.job_id, "running")
         self.return_parse_result(SUCCESS, status_msg_dict[SUCCESS], {})
         self.execute_at_backend(self.get_output_data)
         return
@@ -87,10 +87,13 @@ class OutputGetHandler(data_base_handler.DataBaseHandler):
             secdata = secfxp(10)
             secdata.share.value = data
             input_value.append(secdata)
-        res = await curr_mpc.output(input_value)
+        res = await curr_mpc.output(input_value, receivers=[0])
+        if None not in res:
+            #TODO 这里是写入还是返回呢，这时候结果已经在本机了之后该怎么办呢
+            pass
         await curr_mpc.shutdown()
         self.logger.info(f"job {self.job_id} mpc calculation finish")
-        self.change_job_status(self.job_id,"success")
+        self.change_job_status(self.job_id, "success")
 
     def get_data(self, data_dir):
         if not os.path.exists(data_dir):

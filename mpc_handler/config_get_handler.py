@@ -39,7 +39,7 @@ class GetConfigHandler(data_base_handler.DataBaseHandler):
         # print(self.job_id)
         # 检查 job status 
         job_status = self.get_job_status()
-        if job_status != "ready" and job_status != "running":
+        if job_status == "failed":
             resp_data = {"requested_job_status": job_status}
             self.return_parse_result(OPERATION_FAILED, \
                                      "Job status is not ready, please check the requested job", resp_data)

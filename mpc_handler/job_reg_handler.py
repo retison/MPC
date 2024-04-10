@@ -1,6 +1,7 @@
 import asyncio
 import json
 import os
+import shutil
 import sys
 import time
 from concurrent.futures import ThreadPoolExecutor
@@ -130,6 +131,16 @@ class JobRegHandler(data_base_handler.DataBaseHandler):
             loop.run_until_complete(self.mpc_calculate(curr_mpc, res_list, curr_result_dir, self.data_from[data_id]))
         logger.info("wait for data share finish")
         loop.close()
+        for data_id in range(len(self.data_list)):
+            curr_data_dir = os.path.join(data_dir,self.data_list[data_id])
+            try:
+                shutil.rmtree(curr_data_dir)
+            except:
+                pass
+        try:
+            shutil.rmtree(os.path.join(self.job_dir,"config.ini"))
+        except:
+            pass
         self.change_job_status(self.job_id, "running")
 
 
