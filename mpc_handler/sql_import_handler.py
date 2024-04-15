@@ -22,7 +22,8 @@ class SQLImportHandler(data_base_handler.DataBaseHandler):
     @run_on_executor
     def post(self):
         logger.info("Start Decode Check.")
-        if self.decode_check(["data_id", "sql","psi_ip","psi_port","job_id"], [str, str,str,int,str]) is False:
+        if self.decode_check(["data_id", "sql", "psi_ip", "psi_port", "job_id","mpc_job_id"],
+                             [str, str, str, int, str, str]) is False:
             logger.info("Decode Check Failed.")
             self.write(self.res_dict)
             return
@@ -43,20 +44,35 @@ class SQLImportHandler(data_base_handler.DataBaseHandler):
         psi_ip = self.request_dict["psi_ip"]
         psi_port = self.request_dict["psi_port"]
         job_id = self.request_dict["job_id"]
-        self.psi_change(psi_ip,psi_port,job_id)
+        self.psi_change(psi_ip, psi_port, job_id)
         self.data_list.sort(key=lambda x: x[0], reverse=True)
-        self.data_list = [i[1] for i in self.data_list]
+        psi_result = [i[0] for i in self.data_list]
+        try:
+            self.data_list = [i[1] for i in self.data_list]
+        except:
+            self.data_list = [i[0] for i in self.data_list]
+        data_type = type(self.data_list[0]).__name__
         # 重新计算长度
         self.data_length = len(self.data_list)
+        self.job_id = self.request_dict["job_id"]
+        self.mpc_job_id = self.request_dict["mpc_job_id"]
         if self.data_length <= split_count * 10:
             logger.info("Start write without split.")
             self.write_data_to_disk()
+            self.data_id = f"{self.mpc_job_id}_psi"
+            if not os.path.exists(os.path.join(mpc_data_dir, self.data_id)):
+                self.data_list = psi_result
+                self.write_data_to_disk()
             logger.info("Write to disk without split success.")
         else:
             logger.info("Start write with split.")
             self.write_data_with_split()
+            self.data_id = f"{self.mpc_job_id}_psi"
+            if not os.path.exists(os.path.join(mpc_data_dir,self.data_id)):
+                self.data_list = psi_result
+                self.write_data_with_split()
             logger.info("Write Success.")
-        self.return_parse_result(0, 'success', {"data_length": self.data_length})
+        self.return_parse_result(0, 'success', {"data_length": self.data_length, "data_type": data_type})
         return
 
     def write_data_with_split(self):
@@ -96,7 +112,6 @@ class SQLImportHandler(data_base_handler.DataBaseHandler):
         logger.info("Split %d to path: %s" % (index + 1, file_path))
         logger.info("Split %d length: %d." % (index + 1, len(data)))
         f = open(file_path, 'a')
-        # new_string = '\n'.join(data) + '\n'
         new_string = ""
         for i in data:
             new_string = new_string + str(i) + '\n'
@@ -120,6 +135,7 @@ class SQLImportHandler(data_base_handler.DataBaseHandler):
             return False
         split_count = res["data"]["split_count"]
         split_length_list = res["data"]["split_length_list"]
+        after_psi_data = []
         # 然后针对每一个 split 发一组（可能是一个、也可能多个） request
         for i in range(split_count):
             split = i + 1
@@ -133,7 +149,9 @@ class SQLImportHandler(data_base_handler.DataBaseHandler):
                 res_list = res["data"]["result"]
                 for data in self.data_list:
                     if str(data[0]) in res_list:
-                        self.data_list.remove(data)
+                        after_psi_data.append(data)
+
                 # 然后把这东西存储到 job 硬盘即可
                 logger.info("Intermediate result Split %d (Single) collected." % split)
                 continue
+        self.data_list = after_psi_data

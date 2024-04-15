@@ -1,6 +1,8 @@
 import asyncio
 import base64
+import csv
 import os
+import shutil
 import sys
 from concurrent.futures import ThreadPoolExecutor
 
@@ -26,7 +28,7 @@ class OutputGetHandler(data_base_handler.DataBaseHandler):
     def post(self):
         self.create_logger()
         self.logger.info("Start Decode Check.")
-        if self.decode_check(["job_id", "data_name"], [str, str]) is False:
+        if self.decode_check(["job_id", "data_name","type"], [str, str,str]) is False:
             self.logger.info("Decode Check Failed.")
             self.write(self.res_dict)
             return
@@ -37,6 +39,7 @@ class OutputGetHandler(data_base_handler.DataBaseHandler):
         self.job_dir = os.path.join(mpc_job_dir, self.job_id)
         self.key = self.get_job_key(self.job_id)
         self.key = int(self.key, 10)
+        self.type =self.request_dict["type"]
         # 初始 index
         self.logger.info("Get parameters")
 
@@ -68,6 +71,16 @@ class OutputGetHandler(data_base_handler.DataBaseHandler):
         return
 
     def get_output_data(self):
+        psi_dir = os.path.join(self.job_dir, "decryption_result", "psi_result.csv")
+        if os.path.exists(psi_dir):
+            pass
+        else:
+            if not os.path.exists(os.path.join(self.job_id,"decryption_result")):
+                os.mkdir(os.path.join(self.job_dir,"decryption_result"))
+            source_dir = os.path.join(mpc_data_dir,f"{self.job_id}_psi")
+            target_dir = os.path.join(self.job_dir, "decryption_result", "psi_result.csv")
+            merge_csv_files(source_dir, target_dir)
+            shutil.rmtree(source_dir)
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         sys.argv.append(f"-C../tmp/job/{self.job_id}/config.ini")
@@ -75,13 +88,16 @@ class OutputGetHandler(data_base_handler.DataBaseHandler):
         curr_mpc = runtime.setup()
         data_dir = os.path.join(self.job_dir, "result_dicts", self.data_name + ".csv")
         res_list = self.get_data(data_dir)
-        loop.run_until_complete(self.mpc_calculate(curr_mpc, res_list))
+        loop.run_until_complete(self.mpc_calculate(curr_mpc, res_list, self.data_name))
         loop.close()
 
-    async def mpc_calculate(self, curr_mpc, data_list):
+    async def mpc_calculate(self, curr_mpc, data_list,data_name):
         await curr_mpc.start()
         key = int(self.get_job_key(self.job_id), 10)
-        secfxp = curr_mpc.SecFxp(128, 96, key)
+        if self.type == "str":
+            secfxp = curr_mpc.SecInt(128,key)
+        else:
+            secfxp = curr_mpc.SecFxp(128, 96, key)
         input_value = []
         for data in data_list:
             secdata = secfxp(10)
@@ -90,7 +106,10 @@ class OutputGetHandler(data_base_handler.DataBaseHandler):
         res = await curr_mpc.output(input_value, receivers=[0])
         if None not in res:
             #TODO 这里是写入还是返回呢，这时候结果已经在本机了之后该怎么办呢
-            pass
+            with open(os.path.join(self.job_dir, "decryption_result", data_name + ".csv"),"w") as f:
+                for i in res:
+                    f.write(str(i) + "\n")
+            f.close()
         await curr_mpc.shutdown()
         self.logger.info(f"job {self.job_id} mpc calculation finish")
         self.change_job_status(self.job_id, "success")
@@ -105,3 +124,15 @@ class OutputGetHandler(data_base_handler.DataBaseHandler):
         data_list = [int(i[:-1]) for i in data_list]
         self.logger.info("get data success!")
         return data_list
+
+
+def merge_csv_files(source_folder, target_file):
+    with open(target_file, 'w', newline='') as target_file:
+        csv_writer = csv.writer(target_file)
+        for filename in os.listdir(source_folder):
+            if filename.endswith('.csv'):
+                file_path = os.path.join(source_folder, filename)
+                with open(file_path, 'r') as csv_file:
+                    csv_reader = csv.reader(csv_file)
+                    for row in csv_reader:
+                        csv_writer.writerow(row)

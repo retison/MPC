@@ -90,6 +90,7 @@ class ArithHandler(data_base_handler.DataBaseHandler):
         curr_result_list = []
         secfxp = mpc.SecFxp(128, 96, key)
         for operator in operators:
+            print(operator)
             data_list = self.get_data(operator)
             data_dicts[operator] = data_list
             data_length = len(data_list)

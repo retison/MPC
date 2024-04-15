@@ -1,4 +1,5 @@
 import asyncio
+import base64
 import json
 import os
 import shutil
@@ -30,8 +31,8 @@ class JobRegHandler(data_base_handler.DataBaseHandler):
         self.create_logger()
         if self.action == "job_reg":
             logger.info("Start Decode Check.")
-            if self.decode_check(["job_id", "data_list", "data_length","config","data_from"],
-                                 [str, list, int,str,list]) is False:
+            if self.decode_check(["job_id", "data_list", "data_length","config","data_from","type"],
+                                 [str, list, int,str,list,list]) is False:
                 logger.info("Decode Check Failed.")
                 self.write(self.res_dict)
                 return
@@ -39,6 +40,7 @@ class JobRegHandler(data_base_handler.DataBaseHandler):
             self.data_list = self.request_dict["data_list"]
             self.data_from = self.request_dict["data_from"]
             self.data_length = self.request_dict["data_length"]
+            self.type = self.request_dict["type"]
             self.job_id = self.request_dict["job_id"] + "_host"
             self.key = self.get_job_key(self.job_id)
             self.dbm = database_manager(local_db_ip, local_db_port, \
@@ -128,7 +130,7 @@ class JobRegHandler(data_base_handler.DataBaseHandler):
                 res_list = self.get_data(self.data_list[data_id])
             else:
                 res_list = [0] * self.data_length
-            loop.run_until_complete(self.mpc_calculate(curr_mpc, res_list, curr_result_dir, self.data_from[data_id]))
+            loop.run_until_complete(self.mpc_calculate(curr_mpc, res_list, curr_result_dir, self.data_from[data_id], self.type[data_id]))
         logger.info("wait for data share finish")
         loop.close()
         for data_id in range(len(self.data_list)):
@@ -143,8 +145,6 @@ class JobRegHandler(data_base_handler.DataBaseHandler):
             pass
         self.change_job_status(self.job_id, "running")
 
-
-
     def get_data(self, data_id):
         data_dir = os.path.join(mpc_data_dir, data_id)
         if not os.path.exists(data_dir):
@@ -155,14 +155,20 @@ class JobRegHandler(data_base_handler.DataBaseHandler):
             with open(os.path.join(data_dir, lis), "r") as f:
                 data_list += f.readlines()
             f.close()
-        data_list = [float(i[:-1]) for i in data_list]
+        try:
+            data_list = [float(i[:-1]) for i in data_list]
+        except:
+            data_list = [self.encode_string(i[:-1]) for i in data_list]
         logger.info("get data success!")
         return data_list
 
-    async def mpc_calculate(self, curr_mpc, data_list, result_dir, data_from):
+    async def mpc_calculate(self, curr_mpc, data_list, result_dir, data_from, type):
         await curr_mpc.start()
         key = int(self.get_job_key(self.job_id), 10)
-        secfxp = curr_mpc.SecFxp(128, 96, key)
+        if type == 'str':
+            secfxp = curr_mpc.SecInt(128,key)
+        else:
+            secfxp = curr_mpc.SecFxp(128, 96, key)
         input_value = list(map(secfxp, data_list))
         input_res = curr_mpc.input(input_value,senders=[data_from])
         await curr_mpc.shutdown()
@@ -206,3 +212,9 @@ class JobRegHandler(data_base_handler.DataBaseHandler):
         except:
             self.logger.info("Registering job to party %d failed." % party_index)
             return False
+
+    def encode_string(self,data):
+        encoded_number = int(''.join(str(char.encode('utf-8').hex()) for char in data), 16)
+        print(encoded_number)
+        print("=======================")
+        return encoded_number

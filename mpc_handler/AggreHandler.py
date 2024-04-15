@@ -8,7 +8,6 @@ from tornado.concurrent import run_on_executor
 
 from config import CPU_COUNT, local_db_passwd, local_db_ip, local_db_dbname, local_db_port, local_db_username, MPC_PORT
 from config import mpc_job_dir
-from flow_control.mpc_aggre.utils import get_operator
 from mpc_handler.base import data_base_handler
 from mpc_handler.utils import list_operation, is_port_available
 import mpyc.runtime as runtime

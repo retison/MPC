@@ -11,6 +11,7 @@ from mpc_handler.job_log_handler import JobLogHandler
 from mpc_handler.job_query_handler import JobQueryHandler
 from mpc_handler.job_reg_handler import JobRegHandler
 from mpc_handler.config_get_handler import GetConfigHandler
+from mpc_handler.result_get_handler import ResultGetHandler
 from mpc_handler.sql_import_handler import SQLImportHandler
 
 
@@ -26,8 +27,6 @@ def get_handlers():
         ("/1.0/mpc/crt/get_crt", GetCertHandler, dict(action="cert_get"))
     ]
 
-    # TODO order by\limit\group by这三个中前两个还是很有关系的，但不知道该咋办，这三个还是要多思考一会
-    # TODO 需要增加字符串相关计算，需要增加本地的limit\order by\share
     job_handlers = [
         ("/1.0/mpc/job/create", JobRegHandler, dict(action="job_create")),
         ("/1.0/mpc/job/reg", JobRegHandler, dict(action="job_reg")),
@@ -40,7 +39,8 @@ def get_handlers():
         ("/1.0/mpc/job/aggre", AggreHandler, dict(action="handle_aggre")),
         # 结果的获取函数
         ("/1.0/mpc/job/output/get", OutputGetHandler, dict(action="output_get")),
-
+        # 获取本地的文件结果
+        ("/1.0/mpc/job/result/get", ResultGetHandler, dict(action="result_get"))
     ]
 
     default_handlers = [
