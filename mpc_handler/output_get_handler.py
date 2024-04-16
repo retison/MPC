@@ -104,13 +104,13 @@ class OutputGetHandler(data_base_handler.DataBaseHandler):
             secdata.share.value = data
             input_value.append(secdata)
         res = await curr_mpc.output(input_value, receivers=[0])
+        await curr_mpc.shutdown()
         if None not in res:
             #TODO 这里是写入还是返回呢，这时候结果已经在本机了之后该怎么办呢
             with open(os.path.join(self.job_dir, "decryption_result", data_name + ".csv"),"w") as f:
                 for i in res:
                     f.write(str(i) + "\n")
             f.close()
-        await curr_mpc.shutdown()
         self.logger.info(f"job {self.job_id} mpc calculation finish")
         self.change_job_status(self.job_id, "success")
 
