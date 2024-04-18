@@ -110,3 +110,8 @@ def is_port_available(port):
         except OSError:
             return False
         return True
+
+def revert_data(i,key):
+    if i < 0:
+        i += key
+    return i

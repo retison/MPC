@@ -44,16 +44,13 @@ class SQLImportHandler(data_base_handler.DataBaseHandler):
         psi_ip = self.request_dict["psi_ip"]
         psi_port = self.request_dict["psi_port"]
         job_id = self.request_dict["job_id"]
-        print("================")
         self.psi_change(psi_ip, psi_port, job_id)
-        print("================")
         self.data_list.sort(key=lambda x: x[0], reverse=True)
         psi_result = [i[0] for i in self.data_list]
         try:
             self.data_list = [i[1] for i in self.data_list]
         except:
             self.data_list = [i[0] for i in self.data_list]
-        print(psi_result)
         data_type = type(self.data_list[0]).__name__
         # 重新计算长度
         self.data_length = len(self.data_list)

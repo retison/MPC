@@ -9,7 +9,7 @@ from tornado.concurrent import run_on_executor
 from config import CPU_COUNT, local_db_passwd, local_db_ip, local_db_dbname, local_db_port, local_db_username, MPC_PORT
 from config import mpc_job_dir
 from mpc_handler.base import data_base_handler
-from mpc_handler.utils import list_operation, is_port_available
+from mpc_handler.utils import list_operation, is_port_available, revert_data
 import mpyc.runtime as runtime
 from utilities.database_manager import database_manager
 from utilities.status_code import *
@@ -98,7 +98,7 @@ class AggreHandler(data_base_handler.DataBaseHandler):
             data_dicts[operator] = []
             for i in data_list:
                 change_data = secfxp(10)
-                change_data.share.value = i
+                change_data.share.value = revert_data(i,key)
                 data_dicts[operator].append(change_data)
         text_result, variables = self.get_mpc_operation(method, data_dicts,mpc)
         result = variables[text_result]

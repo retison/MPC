@@ -14,8 +14,6 @@ from utilities import logger
 from utilities.generate_certificates import generate_CA
 from utilities.utilities import check_db_connection, check_servicing_in_running, check_table
 
-
-# TODO 实验2 在开始编码前，请先了解 整个组件 的运行流程，需要进行哪几步操作
 def initialize():
     # 0. 检查端口占用 / 服务器底哦那个情况
     check_servicing_in_running()

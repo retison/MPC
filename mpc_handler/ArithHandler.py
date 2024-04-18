@@ -10,7 +10,7 @@ from tornado.concurrent import run_on_executor
 from config import CPU_COUNT, local_db_passwd, local_db_ip, local_db_dbname, local_db_port, local_db_username, MPC_PORT
 from config import mpc_job_dir
 from mpc_handler.base import data_base_handler
-from mpc_handler.utils import list_operation, is_port_available
+from mpc_handler.utils import list_operation, is_port_available, revert_data
 import mpyc.runtime as runtime
 from utilities.database_manager import database_manager
 from utilities.status_code import *
@@ -97,7 +97,7 @@ class ArithHandler(data_base_handler.DataBaseHandler):
             variables = {}
             for operator in operators:
                 a = secfxp(10)
-                a.share.value = data_dicts[operator][curr_place]
+                a.share.value = revert_data(data_dicts[operator][curr_place],key)
                 variables[operator] = a
             result = eval(method, variables)
             curr_result_list.append(result)

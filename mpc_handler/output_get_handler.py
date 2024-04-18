@@ -14,6 +14,7 @@ from config import CPU_COUNT, local_db_passwd, local_db_ip, local_db_dbname, loc
     mpc_data_dir
 from config import mpc_job_dir
 from mpc_handler.base import data_base_handler
+from mpc_handler.utils import revert_data
 from mpyc import runtime
 from utilities.database_manager import database_manager
 from utilities.status_code import *
@@ -101,7 +102,7 @@ class OutputGetHandler(data_base_handler.DataBaseHandler):
         input_value = []
         for data in data_list:
             secdata = secfxp(10)
-            secdata.share.value = data
+            secdata.share.value = revert_data(data,key)
             input_value.append(secdata)
         res = await curr_mpc.output(input_value, receivers=[0])
         await curr_mpc.shutdown()
